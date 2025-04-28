@@ -11,7 +11,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000', // URL API server
+        url: 'https://ktshop.onrender.com/', // URL API server
       },
     ],
   },
