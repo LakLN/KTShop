@@ -10,7 +10,6 @@ const {
   deleteStaff,
   getStaffById,
   forgetPassword,
-  confirmAdminEmail,
   confirmAdminForgetPass,
 } = require("../controller/admin.controller");
 
@@ -27,17 +26,20 @@ const {
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               name:
  *                 type: string
- *                 description: Admin username
+ *                 description: Admin full name
+ *               email:
+ *                 type: string
+ *                 description: Admin email address
  *               password:
  *                 type: string
  *                 description: Admin password
- *               email:
+ *               role:
  *                 type: string
- *                 description: Admin email
+ *                 description: Admin role (optional)
  *     responses:
- *       201:
+ *       200:
  *         description: Admin registered successfully
  *       400:
  *         description: Bad request
@@ -59,9 +61,9 @@ router.post("/register", registerAdmin);
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               email:
  *                 type: string
- *                 description: Admin username
+ *                 description: Admin email address
  *               password:
  *                 type: string
  *                 description: Admin password
@@ -88,9 +90,11 @@ router.post("/login", loginAdmin);
  *           schema:
  *             type: object
  *             properties:
- *               oldPassword:
+ *               email:
  *                 type: string
- *               newPassword:
+ *               oldPass:
+ *                 type: string
+ *               newPass:
  *                 type: string
  *     responses:
  *       200:
@@ -98,7 +102,7 @@ router.post("/login", loginAdmin);
  *       400:
  *         description: Bad request
  *       401:
- *         description: Unauthorized
+ *         description: Incorrect current password
  *       500:
  *         description: Server error
  */
@@ -121,10 +125,16 @@ router.patch("/change-password", changePassword);
  *                 type: string
  *               email:
  *                 type: string
+ *               password:
+ *                 type: string
+ *               phone:
+ *                 type: string
  *               role:
  *                 type: string
+ *               image:
+ *                 type: string
  *     responses:
- *       201:
+ *       200:
  *         description: Staff added successfully
  *       400:
  *         description: Bad request
@@ -166,8 +176,8 @@ router.get("/all", getAllStaff);
  *     responses:
  *       200:
  *         description: Password reset link sent
- *       400:
- *         description: Bad request
+ *       404:
+ *         description: Admin not found
  *       500:
  *         description: Server error
  */
@@ -188,10 +198,8 @@ router.patch("/forget-password", forgetPassword);
  *             properties:
  *               token:
  *                 type: string
- *                 description: Reset password token
- *               newPassword:
+ *               password:
  *                 type: string
- *                 description: New password
  *     responses:
  *       200:
  *         description: Password reset successfully
@@ -227,7 +235,7 @@ router.get("/get/:id", getStaffById);
 
 /**
  * @swagger
- * /api/admin/update-stuff/{id}:
+ * /api/admin/update-staff/{id}:
  *   patch:
  *     summary: Update a staff member
  *     tags: [Admin]
@@ -249,7 +257,13 @@ router.get("/get/:id", getStaffById);
  *                 type: string
  *               email:
  *                 type: string
+ *               phone:
+ *                 type: string
  *               role:
+ *                 type: string
+ *               image:
+ *                 type: string
+ *               password:
  *                 type: string
  *     responses:
  *       200:
@@ -261,7 +275,7 @@ router.get("/get/:id", getStaffById);
  *       500:
  *         description: Server error
  */
-router.patch("/update-stuff/:id", updateStaff);
+router.patch("/update-staff/:id", updateStaff);
 
 /**
  * @swagger
