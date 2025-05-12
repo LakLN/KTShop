@@ -58,3 +58,11 @@ exports.getSingleCategoryService = async (id) => {
   const result = await Category.findById(id);
   return result;
 }
+
+// get all categories except unwanted ones
+exports.getAllCategoryServicesFiltered = async (excluded) => {
+  const categories = await Category.find({
+    parent: { $nin: excluded }
+  }).populate('products');
+  return categories;
+};

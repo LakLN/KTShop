@@ -43,17 +43,34 @@ exports.getShowCategory = async (req,res,next) => {
 }
 
 // add all category
-exports.getAllCategory = async (req,res,next) => {
+// add this in your getAllCategory function:
+// get all category (exclude unwanted ones)
+exports.getAllCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getAllCategoryServices();
+    const excludeCategories = [
+      "Facial Care",
+      "Awesome Lip Care",
+      "Beauty of Skin",
+      "Discover Skincare",
+      "Bluetooth",
+      "Smart Watch",
+      "CPU Heat Pipes",
+      "Mobile Tablets",
+      "Headphones"
+    ];
+
+    const result = await categoryServices.getAllCategoryServicesFiltered(excludeCategories);
+
     res.status(200).json({
-      success:true,
+      success: true,
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+
 
 
 // add all category
