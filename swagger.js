@@ -10,10 +10,16 @@ const options = {
       description: 'API for my application',
     },
     servers: [
-      {
-        url: 'https://ktshop.onrender.com/', // URL API server
-      },
-    ],
+    {
+      url: 'https://ktshop.onrender.com/', // deployed server
+      description: 'Production Server'
+    },
+    {
+      url: 'http://localhost:7000/', // local development
+      description: 'Localhost Dev Server'
+    }
+  ],
+
   },
   apis: ['./routes/*.js'], // Đường dẫn tới file route chứa Swagger annotations
 };

@@ -1,4 +1,15 @@
 const categoryServices = require("../services/category.service");
+const excludedParents = [
+  "Facial Care",
+  "Awesome Lip Care",
+  "Beauty of Skin",
+  "Discover Skincare",
+  "Bluetooth",
+  "Smart Watch",
+  "CPU Heat Pipes",
+  "Mobile Tablets",
+  "Headphones"
+];
 
 
 // add category
@@ -30,17 +41,18 @@ exports.addAllCategory = async (req,res,next) => {
 }
 
 // add all category
-exports.getShowCategory = async (req,res,next) => {
+exports.getShowCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getShowCategoryServices();
+    const all = await categoryServices.getShowCategoryServices();
+    const result = all.filter(c => !excludedParents.includes(c.parent));
     res.status(200).json({
-      success:true,
+      success: true,
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 // add all category
 // add this in your getAllCategory function:
@@ -74,17 +86,19 @@ exports.getAllCategory = async (req, res, next) => {
 
 
 // add all category
-exports.getProductTypeCategory = async (req,res,next) => {
+exports.getProductTypeCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.getCategoryTypeService(req.params.type);
+    const all = await categoryServices.getCategoryTypeService(req.params.type);
+    const result = all.filter(c => !excludedParents.includes(c.parent));
     res.status(200).json({
-      success:true,
+      success: true,
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
 
 // delete category
 exports.deleteCategory = async (req,res,next) => {
@@ -114,11 +128,19 @@ exports.updateCategory = async (req,res,next) => {
 }
 
 // get single category
-exports.getSingleCategory = async (req,res,next) => {
+exports.getSingleCategory = async (req, res, next) => {
   try {
     const result = await categoryServices.getSingleCategoryService(req.params.id);
-    res.status(200).json(result)
+
+    if (!result || excludedParents.includes(result.parent)) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found or is restricted"
+      });
+    }
+
+    res.status(200).json(result);
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
