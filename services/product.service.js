@@ -3,34 +3,23 @@ const Category = require("../model/Category");
 const Product = require("../model/Products");
 
 // create product service
-exports.createProductService = async (data) => {
-  const excludedParents = [
-    "Facial Care",
-    "Awesome Lip Care",
-    "Beauty of Skin",
-    "Discover Skincare",
-    "Bluetooth",
-    "Smart Watch",
-    "CPU Heat Pipes",
-    "Mobile Tablets",
-    "Headphones"
-  ];
-  const excludedCategories = await Category.find({ parent: { $in: excludedParents } }).select('_id');
-  const excludedIds = excludedCategories.map(cat => cat._id);
-  const product = await Product.create(data);
-  const { _id: productId, brand, category } = product;
-  //update Brand
-  await Brand.updateOne(
-    { _id: brand.id },
-    { $push: { products: productId } }
-  );
-  //Category Brand
-  await Category.updateOne(
-    { _id: category.id },
-    { $push: { products: productId } }
-  );
-  return await Product.find({ category: { $nin: excludedIds } }).populate('category');
+const excludedParents = [
+  "Facial Care",
+  "Awesome Lip Care",
+  "Beauty of Skin",
+  "Discover Skincare",
+  "Bluetooth",
+  "Smart Watch",
+  "CPU Heat Pipes",
+  "Mobile Tablets",
+  "Headphones"
+];
+
+const getExcludedCategoryIds = async () => {
+  const categories = await Category.find({ parent: { $in: excludedParents } }).select('_id');
+  return categories.map(c => c._id.toString());
 };
+
 
 // create all product service
 exports.addAllProductService = async (data) => {
@@ -49,53 +38,56 @@ exports.addAllProductService = async (data) => {
 
 // get product data
 exports.getAllProductsService = async () => {
-  const products = await Product.find({}).populate("reviews");
-  return products;
+  const excludedIds = await getExcludedCategoryIds();
+  return await Product.find({ category: { $nin: excludedIds } }).populate("reviews category");
 };
+
 
 // get type of product service
 exports.getProductTypeService = async (req) => {
   const type = req.params.type;
   const query = req.query;
-  let products;
+  const excludedIds = await getExcludedCategoryIds();
+
+  const baseQuery = {
+    productType: type,
+    category: { $nin: excludedIds },
+  };
+
   if (query.new === "true") {
-    products = await Product.find({ productType: type })
-      .sort({ createdAt: -1 })
-      .limit(8)
-      .populate("reviews");
+    return await Product.find(baseQuery).sort({ createdAt: -1 }).limit(8).populate("reviews");
   } else if (query.featured === "true") {
-    products = await Product.find({
-      productType: type,
-      featured: true,
-    }).populate("reviews");
+    return await Product.find({ ...baseQuery, featured: true }).populate("reviews");
   } else if (query.topSellers === "true") {
-    products = await Product.find({ productType: type })
-      .sort({ sellCount: -1 })
-      .limit(8)
-      .populate("reviews");
+    return await Product.find(baseQuery).sort({ sellCount: -1 }).limit(8).populate("reviews");
   } else {
-    products = await Product.find({ productType: type }).populate("reviews");
+    return await Product.find(baseQuery).populate("reviews");
   }
-  return products;
 };
 
 // get offer product service
-exports.getOfferTimerProductService = async (query) => {
-  const products = await Product.find({
-    productType: query,
+exports.getOfferTimerProductService = async (type) => {
+  const excludedIds = await getExcludedCategoryIds();
+  return await Product.find({
+    productType: type,
+    category: { $nin: excludedIds },
     "offerDate.endDate": { $gt: new Date() },
   }).populate("reviews");
-  return products;
 };
+
 
 // get popular product service by type
 exports.getPopularProductServiceByType = async (type) => {
-  const products = await Product.find({ productType: type })
+  const excludedIds = await getExcludedCategoryIds();
+  return await Product.find({
+    productType: type,
+    category: { $nin: excludedIds }
+  })
     .sort({ "reviews.length": -1 })
     .limit(8)
     .populate("reviews");
-  return products;
 };
+
 
 exports.getTopRatedProductService = async () => {
   const products = await Product.find({
