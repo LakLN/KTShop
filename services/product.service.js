@@ -4,6 +4,19 @@ const Product = require("../model/Products");
 
 // create product service
 exports.createProductService = async (data) => {
+  const excludedParents = [
+    "Facial Care",
+    "Awesome Lip Care",
+    "Beauty of Skin",
+    "Discover Skincare",
+    "Bluetooth",
+    "Smart Watch",
+    "CPU Heat Pipes",
+    "Mobile Tablets",
+    "Headphones"
+  ];
+  const excludedCategories = await Category.find({ parent: { $in: excludedParents } }).select('_id');
+  const excludedIds = excludedCategories.map(cat => cat._id);
   const product = await Product.create(data);
   const { _id: productId, brand, category } = product;
   //update Brand
@@ -16,7 +29,7 @@ exports.createProductService = async (data) => {
     { _id: category.id },
     { $push: { products: productId } }
   );
-  return product;
+  return await Product.find({ category: { $nin: excludedIds } }).populate('category');
 };
 
 // create all product service

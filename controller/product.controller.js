@@ -1,6 +1,17 @@
 const Brand = require("../model/Brand");
 const productServices = require("../services/product.service");
 const Product = require("../model/Products");
+const excludedParents = [
+  "Facial Care",
+  "Awesome Lip Care",
+  "Beauty of Skin",
+  "Discover Skincare",
+  "Bluetooth",
+  "Smart Watch",
+  "CPU Heat Pipes",
+  "Mobile Tablets",
+  "Headphones"
+];
 
 
 // add product
