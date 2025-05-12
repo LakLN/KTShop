@@ -14,7 +14,7 @@ const categories = [
       "641e887d05f9ee1717e1348f",
       "641e887d05f9ee1717e13496"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "6419723bd7dc5155c04350d4",
@@ -30,7 +30,7 @@ const categories = [
       "641e887d05f9ee1717e1349f",
       "641d4106dbfab7b02ab28b22"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "6419723bd7dc5155c04350d5",
@@ -45,7 +45,7 @@ const categories = [
       "641e887d05f9ee1717e134ad",
       "641e887d05f9ee1717e134b2"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "6419723bd7dc5155c04350d6",
@@ -62,7 +62,7 @@ const categories = [
       "641e887d05f9ee1717e134c0",
       "641e887d05f9ee1717e134c6"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "6419723bd7dc5155c04350d7",
@@ -77,7 +77,7 @@ const categories = [
       "641e887d05f9ee1717e134cb",
       "641e887d05f9ee1717e134cf"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "64200cb921162f8b15beae3e",
@@ -141,7 +141,7 @@ const categories = [
       "64250d8e253d81bc860d4d26",
       "6426a68a253d81bc860d5ea6"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "64240ca8253d81bc860d4cf4",
@@ -156,7 +156,7 @@ const categories = [
       "642515c0253d81bc860d4da3",
       "6426ab33253d81bc860d5f86"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "64240e13253d81bc860d4cf6",
@@ -171,7 +171,7 @@ const categories = [
       "64251bc0253d81bc860d4db5",
       "6426adba253d81bc860d6132"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "64240fb4253d81bc860d4cf8",
@@ -186,7 +186,7 @@ const categories = [
       "64252172253d81bc860d4dbe",
       "6426b217253d81bc860d6217"
     ],
-    status: "Show"
+    status: "UnShow"
   },
   {
     _id: "64312cd3e2c1bd22cebb2129",
