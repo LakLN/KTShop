@@ -1,20 +1,15 @@
-const mongoose = require('mongoose');
-const { secret } = require('./secret');
+// config/db.js 
+const { Sequelize } = require('sequelize');
+const { secret } = require('../config/secret'); // hoặc require('./secret')
 
-mongoose.set('strictQuery', false);
-
-// local url 
-const DB_URL = 'mongodb://0.0.0.0:27017/shofy'; 
-// mongodb url
-const MONGO_URI = secret.db_url;
-
-const connectDB = async () => {
-  try { 
-    await mongoose.connect(MONGO_URI);
-    console.log('mongodb connection success!');
-  } catch (err) {
-    console.log('mongodb connection failed!', err.message);
+const sequelize = new Sequelize(secret.db_url, {
+  dialect: 'mysql',
+  logging: false,
+  dialectOptions: {
+    ssl: {
+      rejectUnauthorized: false
+    }
   }
-};
+});
 
-module.exports = connectDB;
+module.exports = sequelize;

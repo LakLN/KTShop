@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const uploader = require('../middleware/uploder');
-const { cloudinaryController } = require('../controller/cloudinary.controller');
+const {
+  saveImageCloudinary,
+  addMultipleImageCloudinary,
+  cloudinaryDeleteController,
+} = require('../controller/cloudinary.controller');
 const multer = require('multer');
 
 const upload = multer();
@@ -31,7 +35,7 @@ const upload = multer();
  *       500:
  *         description: Server error
  */
-router.post('/add-img', upload.single('image'), cloudinaryController.saveImageCloudinary);
+router.post('/add-img', upload.single('image'), saveImageCloudinary);
 
 /**
  * @swagger
@@ -60,7 +64,7 @@ router.post('/add-img', upload.single('image'), cloudinaryController.saveImageCl
  *       500:
  *         description: Server error
  */
-router.post('/add-multiple-img', upload.array('images', 5), cloudinaryController.addMultipleImageCloudinary);
+router.post('/add-multiple-img', upload.array('images', 5), addMultipleImageCloudinary);
 
 /**
  * @swagger
@@ -88,6 +92,6 @@ router.post('/add-multiple-img', upload.array('images', 5), cloudinaryController
  *       500:
  *         description: Server error
  */
-router.delete('/img-delete', cloudinaryController.cloudinaryDeleteController);
+router.delete('/img-delete', cloudinaryDeleteController);
 
 module.exports = router;

@@ -1,68 +1,91 @@
 const ApiError = require('../errors/api-error');
-const Category = require('../model/Category');
-const Products = require('../model/Products');
+const { Category, Product } = require('../model');
 
-// create category service
+// Tạo mới 1 category
 exports.createCategoryService = async (data) => {
   const category = await Category.create(data);
   return category;
-}
+};
 
-// create all category service
+// Thêm mới toàn bộ categories (xoá hết cũ, rồi thêm mới)
 exports.addAllCategoryService = async (data) => {
-  await Category.deleteMany()
-  const category = await Category.insertMany(data);
-  return category;
-}
-
-// get all show category service
-exports.getShowCategoryServices = async () => {
-  const category = await Category.find({status:'Show'}).populate('products');
-  return category;
-}
-
-// get all category 
-exports.getAllCategoryServices = async () => {
-  const category = await Category.find({})
-  return category;
-}
-
-// get type of category service
-exports.getCategoryTypeService = async (param) => {
-  const categories = await Category.find({productType:param}).populate('products');
+  await Category.destroy({ where: {} });
+  const categories = await Category.bulkCreate(data);
   return categories;
-}
+};
 
-// get type of category service
+// Lấy category có status 'Show' (và kèm products nếu có)
+exports.getShowCategoryServices = async () => {
+  const categories = await Category.findAll({
+    where: { status: 'Show' },
+    include: [
+      {
+        model: Product,
+        as: 'products', // cần define association
+        required: false,
+      }
+    ]
+  });
+  return categories;
+};
+
+// Lấy toàn bộ categories
+exports.getAllCategoryServices = async () => {
+  const categories = await Category.findAll();
+  return categories;
+};
+
+// Lấy categories theo product_type (và kèm products nếu cần)
+exports.getCategoryTypeService = async (param) => {
+  const categories = await Category.findAll({
+    where: { product_type: param },
+    include: [
+      {
+        model: Product,
+        as: 'products', // cần define association
+        required: false,
+      }
+    ]
+  });
+  return categories;
+};
+
+// Xoá category theo id
 exports.deleteCategoryService = async (id) => {
-  const result = await Category.findByIdAndDelete(id);
-  return result;
-}
+  const deleted = await Category.destroy({ where: { id } });
+  return deleted; // trả về số bản ghi đã xoá (0|1)
+};
 
-// update category
-exports.updateCategoryService = async (id,payload) => {
-  const isExist = await Category.findOne({ _id:id })
-
+// Update category
+exports.updateCategoryService = async (id, payload) => {
+  const isExist = await Category.findByPk(id);
   if (!isExist) {
-    throw new ApiError(404, 'Category not found !')
+    throw new ApiError(404, 'Category not found !');
   }
-
-  const result = await Category.findOneAndUpdate({ _id:id }, payload, {
-    new: true,
-  })
-  return result
-}
-
-// get single category
-exports.getSingleCategoryService = async (id) => {
-  const result = await Category.findById(id);
+  await Category.update(payload, { where: { id } });
+  const result = await Category.findByPk(id);
   return result;
-}
+};
 
-// get all categories except unwanted ones
+// Lấy single category theo id
+exports.getSingleCategoryService = async (id) => {
+  const result = await Category.findByPk(id);
+  return result;
+};
+
+// Lấy toàn bộ categories trừ những parent không mong muốn (filtered)
 exports.getAllCategoryServicesFiltered = async (excluded) => {
-  const categories = await Category.find({
-    parent: { $nin: excluded }
-  }).populate('products');
+  const categories = await Category.findAll({
+    where: {
+      parent: { [require('sequelize').Op.notIn]: excluded }
+    },
+    include: [
+      {
+        model: Product,
+        as: 'products',
+        required: false,
+      }
+    ]
+  });
   return categories;
 };

@@ -6,7 +6,7 @@ dotenv.config({ path: path.join(process.cwd(), '.env') })
 module.exports.secret = {
   port: process.env.PORT,
   env: process.env.NODE_ENV,
-  db_url: process.env.MONGO_URI,
+  db_url: process.env.DATABASE_URL,
   token_secret: process.env.TOKEN_SECRET,
   jwt_secret_for_verify: process.env.JWT_SECRET_FOR_VERIFY,
 

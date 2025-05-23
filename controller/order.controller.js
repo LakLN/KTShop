@@ -1,8 +1,8 @@
 const { secret } = require("../config/secret");
 const stripe = require("stripe")(secret.stripe_key);
-const Order = require("../model/Order");
+const { Order, User } = require("../model"); // Lấy models từ Sequelize
 
-// create-payment-intent
+// Tạo payment intent với Stripe
 exports.paymentIntent = async (req, res, next) => {
   try {
     const product = req.body;
@@ -19,70 +19,81 @@ exports.paymentIntent = async (req, res, next) => {
     });
   } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
-// addOrder
+
+// Thêm order mới
 exports.addOrder = async (req, res, next) => {
   try {
-    const orderItems = await Order.create(req.body);
-
+    const order = await Order.create(req.body);
     res.status(200).json({
       success: true,
       message: "Order added successfully",
-      order: orderItems,
+      order,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };
-// get Orders
+
+// Lấy tất cả orders (có thể include user nếu muốn)
 exports.getOrders = async (req, res, next) => {
   try {
-    const orderItems = await Order.find({}).populate('user');
+    const orderItems = await Order.findAll({
+      include: [
+        {
+          model: User,
+          as: 'user', // Chỉ dùng được nếu đã define association!
+          required: false
+        }
+      ],
+      order: [['id', 'DESC']]
+    });
     res.status(200).json({
       success: true,
       data: orderItems,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
-  }
-};
-// get Orders
-exports.getSingleOrder = async (req, res, next) => {
-  try {
-    const orderItem = await Order.findById(req.params.id).populate('user');
-    res.status(200).json(orderItem);
-  }
-  catch (error) {
-    console.log(error);
-    next(error)
+    next(error);
   }
 };
 
-exports.updateOrderStatus = async (req, res) => {
+// Lấy một order theo id (có thể include user nếu muốn)
+exports.getSingleOrder = async (req, res, next) => {
+  try {
+    const orderItem = await Order.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          required: false
+        }
+      ]
+    });
+    res.status(200).json(orderItem);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+
+// Update status order
+exports.updateOrderStatus = async (req, res, next) => {
   const newStatus = req.body.status;
   try {
-    await Order.updateOne(
-      {
-        _id: req.params.id,
-      },
-      {
-        $set: {
-          status: newStatus,
-        },
-      }, { new: true })
+    await Order.update(
+      { status: newStatus },
+      { where: { id: req.params.id } }
+    );
     res.status(200).json({
       success: true,
       message: 'Status updated successfully',
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.log(error);
-    next(error)
+    next(error);
   }
 };

@@ -1,183 +1,112 @@
-const mongoose = require("mongoose");
-const Order = require("../model/Order");
+const { Op, fn, col, literal, where, QueryTypes } = require("sequelize");
+const { Order, Product, Category, User, sequelize } = require("../model");
 const dayjs = require("dayjs");
-const customParseFormat = require("dayjs/plugin/customParseFormat");
-const isToday = require("dayjs/plugin/isToday");
-const isYesterday = require("dayjs/plugin/isYesterday");
-const isSameOrBefore = require("dayjs/plugin/isSameOrBefore");
-const isSameOrAfter = require("dayjs/plugin/isSameOrAfter");
 
-// Apply necessary plugins to dayjs
-dayjs.extend(customParseFormat);
-dayjs.extend(isToday);
-dayjs.extend(isYesterday);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-
-// get all orders user
-module.exports.getOrderByUser = async (req, res,next) => {
-  // console.log(req.user)
+// 1. Lấy tất cả đơn hàng theo user
+module.exports.getOrderByUser = async (req, res, next) => {
   try {
-    const { page, limit } = req.query;
+    const { page = 1, limit = 8 } = req.query;
+    const offset = (page - 1) * limit;
 
-    const pages = Number(page) || 1;
-    const limits = Number(limit) || 8;
-    const skip = (pages - 1) * limits;
+    const whereUser = { user_id: req.user.id };
 
-    const totalDoc = await Order.countDocuments({ user: req.user._id });
+    // Đếm tổng số đơn hàng
+    const totalDoc = await Order.count({ where: whereUser });
 
-    // total padding order count
-    const totalPendingOrder = await Order.aggregate([
-      {
-        $match: {
-          status: "pending",
-          user: new mongoose.Types.ObjectId(req.user._id),
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" },
-          count: {
-            $sum: 1,
-          },
-        },
-      },
-    ]);
+    // Đếm số lượng & tổng tiền từng trạng thái
+    const statusList = ["pending", "processing", "delivered"];
+    let result = {};
+    for (let status of statusList) {
+      const { count, total } = await Order.findOne({
+        attributes: [
+          [fn("COUNT", col("id")), "count"],
+          [fn("SUM", col("total_amount")), "total"]
+        ],
+        where: { ...whereUser, status }
+      }) || { count: 0, total: 0 };
+      result[status] = count || 0;
+    }
 
-    // total padding order count
-    const totalProcessingOrder = await Order.aggregate([
-      {
-        $match: {
-          status: "processing",
-          user: new mongoose.Types.ObjectId(req.user._id),
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" },
-          count: {
-            $sum: 1,
-          },
-        },
-      },
-    ]);
-
-    const totalDeliveredOrder = await Order.aggregate([
-      {
-        $match: {
-          status: "delivered",
-          user: new mongoose.Types.ObjectId(req.user._id),
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" },
-          count: {
-            $sum: 1,
-          },
-        },
-      },
-    ]);
-
-    // today order amount
-
-    // query for orders
-    const orders = await Order.find({ user: req.user._id }).sort({ _id: -1 });
+    // Lấy danh sách đơn hàng (phân trang)
+    const orders = await Order.findAll({
+      where: whereUser,
+      order: [["id", "DESC"]],
+      limit: Number(limit),
+      offset
+    });
 
     res.send({
       orders,
-      pending: totalPendingOrder.length === 0 ? 0 : totalPendingOrder[0].count,
-      processing:
-        totalProcessingOrder.length === 0 ? 0 : totalProcessingOrder[0].count,
-      delivered:
-        totalDeliveredOrder.length === 0 ? 0 : totalDeliveredOrder[0].count,
-
+      pending: result.pending,
+      processing: result.processing,
+      delivered: result.delivered,
       totalDoc,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
-// getOrderById
-module.exports.getOrderById = async (req, res,next) => {
+// 2. Lấy đơn hàng theo id
+module.exports.getOrderById = async (req, res, next) => {
   try {
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findByPk(req.params.id);
     res.status(200).json({
       success: true,
       order,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
-// getDashboardAmount
-exports.getDashboardAmount = async (req, res,next) => {
+// 3. Dashboard: tổng tiền hôm nay, hôm qua, tháng, tất cả, phân loại theo payment
+exports.getDashboardAmount = async (req, res, next) => {
   try {
-    const todayStart = dayjs().startOf("day");
-    const todayEnd = dayjs().endOf("day");
+    // Lấy các mốc thời gian
+    const todayStart = dayjs().startOf("day").toDate();
+    const todayEnd = dayjs().endOf("day").toDate();
+    const yesterdayStart = dayjs().subtract(1, "day").startOf("day").toDate();
+    const yesterdayEnd = dayjs().subtract(1, "day").endOf("day").toDate();
+    const monthStart = dayjs().startOf("month").toDate();
+    const monthEnd = dayjs().endOf("month").toDate();
 
-    const yesterdayStart = dayjs().subtract(1, "day").startOf("day");
-    const yesterdayEnd = dayjs().subtract(1, "day").endOf("day");
+    // Helper function lấy dữ liệu tổng cho từng payment method
+    const calcPayment = (orders, method) =>
+      orders.filter(o => o.payment_method === method)
+        .reduce((total, o) => total + Number(o.total_amount || 0), 0);
 
-    const monthStart = dayjs().startOf("month");
-    const monthEnd = dayjs().endOf("month");
-
-    const todayOrders = await Order.find({
-      createdAt: { $gte: todayStart.toDate(), $lte: todayEnd.toDate() },
-    });
-
-    let todayCashPaymentAmount = 0;
-    let todayCardPaymentAmount = 0;
-
-    todayOrders.forEach((order) => {
-      if (order.paymentMethod === "COD") {
-        todayCashPaymentAmount += order.totalAmount;
-      } else if (order.paymentMethod === "Card") {
-        todayCardPaymentAmount += order.totalAmount;
+    // Đơn hàng hôm nay
+    const todayOrders = await Order.findAll({
+      where: {
+        created_at: { [Op.between]: [todayStart, todayEnd] }
       }
     });
+    const todayOrderAmount = todayOrders.reduce((t, o) => t + Number(o.total_amount), 0);
+    const todayCashPaymentAmount = calcPayment(todayOrders, "COD");
+    const todayCardPaymentAmount = calcPayment(todayOrders, "Card");
 
-    const yesterdayOrders = await Order.find({
-      createdAt: { $gte: yesterdayStart.toDate(), $lte: yesterdayEnd.toDate() },
-    });
-
-    let yesterDayCashPaymentAmount = 0;
-    let yesterDayCardPaymentAmount = 0;
-
-    yesterdayOrders.forEach((order) => {
-      if (order.paymentMethod === "COD") {
-        yesterDayCashPaymentAmount += order.totalAmount;
-      } else if (order.paymentMethod === "Card") {
-        yesterDayCardPaymentAmount += order.totalAmount;
+    // Hôm qua
+    const yesterdayOrders = await Order.findAll({
+      where: {
+        created_at: { [Op.between]: [yesterdayStart, yesterdayEnd] }
       }
     });
+    const yesterdayOrderAmount = yesterdayOrders.reduce((t, o) => t + Number(o.total_amount), 0);
+    const yesterDayCashPaymentAmount = calcPayment(yesterdayOrders, "COD");
+    const yesterDayCardPaymentAmount = calcPayment(yesterdayOrders, "Card");
 
-    const monthlyOrders = await Order.find({
-      createdAt: { $gte: monthStart.toDate(), $lte: monthEnd.toDate() },
+    // Tháng này
+    const monthlyOrders = await Order.findAll({
+      where: {
+        created_at: { [Op.between]: [monthStart, monthEnd] }
+      }
     });
+    const monthlyOrderAmount = monthlyOrders.reduce((t, o) => t + Number(o.total_amount), 0);
 
-    const totalOrders = await Order.find();
-    const todayOrderAmount = todayOrders.reduce(
-      (total, order) => total + order.totalAmount,
-      0
-    );
-    const yesterdayOrderAmount = yesterdayOrders.reduce(
-      (total, order) => total + order.totalAmount,
-      0
-    );
-
-    const monthlyOrderAmount = monthlyOrders.reduce((total, order) => {
-      return total + order.totalAmount;
-    }, 0);
-    const totalOrderAmount = totalOrders.reduce(
-      (total, order) => total + order.totalAmount,
-      0
-    );
+    // Tổng cộng
+    const totalOrders = await Order.findAll();
+    const totalOrderAmount = totalOrders.reduce((t, o) => t + Number(o.total_amount), 0);
 
     res.status(200).send({
       todayOrderAmount,
@@ -190,109 +119,103 @@ exports.getDashboardAmount = async (req, res,next) => {
       yesterDayCashPaymentAmount,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
-// get sales report
-exports.getSalesReport = async (req, res,next) => {
-  try {
-    const startOfWeek = new Date();
-    startOfWeek.setDate(startOfWeek.getDate() - 7);
 
-    const salesOrderChartData = await Order.find({
-      updatedAt: {
-        $gte: startOfWeek,
-        $lte: new Date(),
-      },
+// 4. Báo cáo doanh số 7 ngày gần nhất
+exports.getSalesReport = async (req, res, next) => {
+  try {
+    const startOfWeek = dayjs().subtract(7, 'day').startOf('day').toDate();
+    const endOfWeek = dayjs().endOf('day').toDate();
+
+    const salesOrderChartData = await Order.findAll({
+      where: {
+        updated_at: {
+          [Op.between]: [startOfWeek, endOfWeek]
+        }
+      }
     });
 
-    const salesReport = salesOrderChartData.reduce((res, value) => {
-      const onlyDate = value.updatedAt.toISOString().split("T")[0];
-
-      if (!res[onlyDate]) {
-        res[onlyDate] = { date: onlyDate, total: 0, order: 0 };
+    const salesReport = {};
+    salesOrderChartData.forEach(value => {
+      const onlyDate = dayjs(value.updated_at).format("YYYY-MM-DD");
+      if (!salesReport[onlyDate]) {
+        salesReport[onlyDate] = { date: onlyDate, total: 0, order: 0 };
       }
-      res[onlyDate].total += value.totalAmount;
-      res[onlyDate].order += 1;
-      return res;
-    }, {});
+      salesReport[onlyDate].total += Number(value.total_amount);
+      salesReport[onlyDate].order += 1;
+    });
 
     const salesReportData = Object.values(salesReport);
 
-    // Send the response to the client site
     res.status(200).json({ salesReport: salesReportData });
   } catch (error) {
-    // Handle error if any
-    next(error)
+    next(error);
   }
 };
 
-// Most Selling Category
-exports.mostSellingCategory = async (req, res,next) => {
+// 5. Thống kê 5 category bán chạy nhất (dựa vào dữ liệu cart JSON)
+exports.mostSellingCategory = async (req, res, next) => {
   try {
-    const categoryData = await Order.aggregate([
-      {
-        $unwind: "$cart", 
-      },
-      {
-        $group: {
-          _id: "$cart.productType",
-          count: { $sum: "$cart.orderQuantity" },
-        },
-      },
-      {
-        $sort: { count: -1 },
-      },
-      {
-        $limit: 5,
-      },
-    ]);
+    // Nếu bạn có bảng trung gian order_product (nên có!), JOIN lấy group luôn
+    // Còn nếu cart lưu JSON, bạn phải scan toàn bộ order và group bằng JS
+    const orders = await Order.findAll();
+    // Gom các productType trong cart (cart: array of products)
+    const categoryMap = {};
+    orders.forEach(order => {
+      let cart = [];
+      try { cart = typeof order.cart === 'string' ? JSON.parse(order.cart) : order.cart; } catch {}
+      (cart || []).forEach(item => {
+        const type = item.productType;
+        const quantity = Number(item.orderQuantity || 1);
+        if (!categoryMap[type]) categoryMap[type] = 0;
+        categoryMap[type] += quantity;
+      });
+    });
+    // Chuyển về mảng, sort giảm dần
+    const categoryData = Object.entries(categoryMap)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
 
     res.status(200).json({ categoryData });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };
 
-// dashboard recent order
-exports.getDashboardRecentOrder = async (req, res,next) => {
+// 6. Đơn hàng dashboard (gần đây)
+exports.getDashboardRecentOrder = async (req, res, next) => {
   try {
-    const { page, limit } = req.query;
+    const { page = 1, limit = 8 } = req.query;
+    const offset = (page - 1) * limit;
 
-    const pages = Number(page) || 1;
-    const limits = Number(limit) || 8;
-    const skip = (pages - 1) * limits;
-
+    // Lọc theo status hợp lệ
     const queryObject = {
-      status: { $in: ["pending", "processing", "delivered", "cancel"] },
+      status: { [Op.in]: ["pending", "processing", "delivered", "cancel"] }
     };
 
-    const totalDoc = await Order.countDocuments(queryObject);
+    const totalDoc = await Order.count({ where: queryObject });
 
-    const orders = await Order.aggregate([
-      { $match: queryObject },
-      { $sort: { updatedAt: -1 } },
-      {
-        $project: {
-          invoice: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          paymentMethod: 1,
-          name: 1,
-          user: 1,
-          totalAmount: 1,
-          status:1,
-        },
-      },
-    ]);
+    const orders = await Order.findAll({
+      where: queryObject,
+      order: [["updated_at", "DESC"]],
+      attributes: [
+        "invoice", "created_at", "updated_at", "payment_method", "name",
+        "user_id", "total_amount", "status"
+      ],
+      limit: Number(limit),
+      offset
+    });
 
     res.status(200).send({
-      orders: orders,
-      page: page,
-      limit: limit,
+      orders,
+      page: Number(page),
+      limit: Number(limit),
       totalOrder: totalDoc,
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
 };

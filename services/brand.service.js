@@ -1,48 +1,55 @@
 const ApiError = require('../errors/api-error');
-const Brand = require('../model/Brand');
+const { Brand, Product } = require('../model'); // Lưu ý cần define association ở models/index.js nếu muốn include Product
 
-// addBrandService
-module.exports.addBrandService = async (data) => {
+// Thêm mới 1 Brand
+exports.addBrandService = async (data) => {
   const brand = await Brand.create(data);
-  return brand
-}
+  return brand;
+};
 
-// create all Brands service
+// Thêm mới toàn bộ Brand (xoá hết cũ rồi thêm mới)
 exports.addAllBrandService = async (data) => {
-  await Brand.deleteMany()
-  const brands = await Brand.insertMany(data);
+  await Brand.destroy({ where: {} });
+  const brands = await Brand.bulkCreate(data);
   return brands;
-}
+};
 
-
-// get all Brands service
+// Lấy tất cả Brand active (kèm products nếu muốn)
 exports.getBrandsService = async () => {
-  const brands = await Brand.find({status:'active'}).populate('products');
+  const brands = await Brand.findAll({
+    where: { status: 'active' },
+    include: [
+      {
+        model: Product,
+        as: 'products', // chỉ dùng khi đã khai báo association
+        required: false
+      }
+    ]
+  });
   return brands;
-}
+};
 
-// get all Brands service
+// Xoá Brand theo id
 exports.deleteBrandsService = async (id) => {
-  const brands = await Brand.findByIdAndDelete(id);
-  return brands;
-}
+  const deleted = await Brand.destroy({ where: { id } });
+  return deleted; // trả về số bản ghi đã xoá (0|1)
+};
 
-// update category
-exports.updateBrandService = async (id,payload) => {
-  const isExist = await Brand.findOne({ _id:id })
+// Cập nhật Brand
+exports.updateBrandService = async (id, payload) => {
+  const isExist = await Brand.findByPk(id);
 
   if (!isExist) {
-    throw new ApiError(404, 'Brand not found !')
+    throw new ApiError(404, 'Brand not found !');
   }
 
-  const result = await Brand.findOneAndUpdate({ _id:id }, payload, {
-    new: true,
-  })
-  return result
-}
-
-// get single category
-exports.getSingleBrandService = async (id) => {
-  const result = await Brand.findById(id);
+  await Brand.update(payload, { where: { id } });
+  const result = await Brand.findByPk(id);
   return result;
-}
+};
+
+// Lấy Brand theo id
+exports.getSingleBrandService = async (id) => {
+  const result = await Brand.findByPk(id);
+  return result;
+};

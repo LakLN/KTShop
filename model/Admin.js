@@ -1,83 +1,25 @@
-const mongoose = require("mongoose");
-const bcrypt = require('bcryptjs');
-const crypto = require("crypto");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/db");
 
-const adminSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-    },
-    image: {
-      type: String,
-      required: false,
-    },
-    address: {
-      type: String,
-      required: false,
-    },
-    country: {
-      type: String,
-      required: false,
-    },
-    city: {
-      type: String,
-      required: false,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-    },
-    phone: {
-      type: String,
-      required: false,
-    },
-    status: {
-      type: String,
-      required: false,
-      default: "Active",
-      enum: ["Active", "Inactive"],
-    },
-    password: {
-      type: String,
-      required: false,
-      default: bcrypt.hashSync("12345678"),
-    },
-    role: {
-      type: String,
-      required: true,
-      default: "Admin",
-      enum: [
-        "Admin",
-        "Super Admin",
-        "Manager",
-        "CEO",
-      ],
-    },
-    joiningDate: {
-      type: Date,
-      required: false,
-    },
-    confirmationToken: String,
-    confirmationTokenExpires: Date,
-  },
-  {
-    timestamps: true, 
-  }
-);
-
-// generateConfirmationToken
-adminSchema.methods.generateConfirmationToken = function () {
-  const token = crypto.randomBytes(32).toString("hex");
-  this.confirmationToken = token;
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  this.confirmationTokenExpires = date;
-  return token;
-};
-
-const Admin = mongoose.model("Admin", adminSchema);
+const Admin = sequelize.define("Admin", {
+  id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+  name: { type: DataTypes.STRING(255), allowNull: false },
+  image: { type: DataTypes.TEXT },
+  address: { type: DataTypes.TEXT },
+  country: { type: DataTypes.STRING(100) },
+  city: { type: DataTypes.STRING(100) },
+  email: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+  phone: { type: DataTypes.STRING(20) },
+  status: { type: DataTypes.ENUM("Active", "Inactive"), defaultValue: "Active" },
+  password: { type: DataTypes.STRING(255), allowNull: false },
+  role: { type: DataTypes.ENUM("Admin", "Super Admin", "Manager", "CEO"), defaultValue: "Admin" },
+  joining_date: { type: DataTypes.DATE },
+  confirmation_token: { type: DataTypes.STRING(255) },
+  confirmation_token_expires: { type: DataTypes.DATE }
+}, {
+  tableName: "admins",
+  underscored: true,
+  timestamps: true
+});
 
 module.exports = Admin;

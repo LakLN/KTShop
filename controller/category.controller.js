@@ -1,4 +1,6 @@
 const categoryServices = require("../services/category.service");
+
+// Danh sách parent không cho phép hiển thị
 const excludedParents = [
   "Facial Care",
   "Awesome Lip Care",
@@ -11,9 +13,8 @@ const excludedParents = [
   "Headphones"
 ];
 
-
-// add category
-exports.addCategory = async (req,res,next) => {
+// Thêm 1 category
+exports.addCategory = async (req, res, next) => {
   try {
     const result = await categoryServices.createCategoryService(req.body);
     res.status(200).json({
@@ -22,25 +23,24 @@ exports.addCategory = async (req,res,next) => {
       data: result,
     });
   } catch (error) {
-    console.log(error)
-    next(error)
+    next(error);
   }
-}
+};
 
-// add all category
-exports.addAllCategory = async (req,res,next) => {
+// Thêm nhiều category cùng lúc
+exports.addAllCategory = async (req, res, next) => {
   try {
     const result = await categoryServices.addAllCategoryService(req.body);
     res.json({
-      message:'Category added successfully',
+      message: "Category added successfully",
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
-// add all category
+// Lấy tất cả category có status "Show" và không thuộc excludedParents
 exports.getShowCategory = async (req, res, next) => {
   try {
     const all = await categoryServices.getShowCategoryServices();
@@ -54,25 +54,10 @@ exports.getShowCategory = async (req, res, next) => {
   }
 };
 
-// add all category
-// add this in your getAllCategory function:
-// get all category (exclude unwanted ones)
+// Lấy tất cả category (ngoại trừ 1 số parent bị exclude)
 exports.getAllCategory = async (req, res, next) => {
   try {
-    const excludeCategories = [
-      "Facial Care",
-      "Awesome Lip Care",
-      "Beauty of Skin",
-      "Discover Skincare",
-      "Bluetooth",
-      "Smart Watch",
-      "CPU Heat Pipes",
-      "Mobile Tablets",
-      "Headphones"
-    ];
-
-    const result = await categoryServices.getAllCategoryServicesFiltered(excludeCategories);
-
+    const result = await categoryServices.getAllCategoryServicesFiltered(excludedParents);
     res.status(200).json({
       success: true,
       result,
@@ -82,10 +67,7 @@ exports.getAllCategory = async (req, res, next) => {
   }
 };
 
-
-
-
-// add all category
+// Lấy category theo loại product_type (và loại bỏ excludedParents)
 exports.getProductTypeCategory = async (req, res, next) => {
   try {
     const all = await categoryServices.getCategoryTypeService(req.params.type);
@@ -99,35 +81,34 @@ exports.getProductTypeCategory = async (req, res, next) => {
   }
 };
 
-
-// delete category
-exports.deleteCategory = async (req,res,next) => {
+// Xoá category
+exports.deleteCategory = async (req, res, next) => {
   try {
     const result = await categoryServices.deleteCategoryService(req.params.id);
     res.status(200).json({
-      success:true,
+      success: true,
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
-// update category
-exports.updateCategory = async (req,res,next) => {
+// Cập nhật category
+exports.updateCategory = async (req, res, next) => {
   try {
-    const result = await categoryServices.updateCategoryService(req.params.id,req.body);
+    const result = await categoryServices.updateCategoryService(req.params.id, req.body);
     res.status(200).json({
-      status:'success',
-      message:'Category update successfully',
+      status: "success",
+      message: "Category update successfully",
       result,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
-// get single category
+// Lấy 1 category theo id (và loại trừ parent không hợp lệ)
 exports.getSingleCategory = async (req, res, next) => {
   try {
     const result = await categoryServices.getSingleCategoryService(req.params.id);

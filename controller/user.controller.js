@@ -1,42 +1,45 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../model/User");
+const { User } = require("../model");
 const { sendEmail } = require("../config/email");
 const { generateToken, tokenForVerify } = require("../utils/token");
 const { secret } = require("../config/secret");
+const { Op } = require("sequelize");
 
-// register user
-// sign up
-exports.signup = async (req, res,next) => {
+// register user / sign up
+exports.signup = async (req, res, next) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
+    const user = await User.findOne({ where: { email: req.body.email } });
     if (user) {
       res.send({ status: "failed", message: "Email already exists" });
     } else {
+      // Hash password
+      if (req.body.password) {
+        req.body.password = bcrypt.hashSync(req.body.password);
+      }
+      // Tạo user
       const saved_user = await User.create(req.body);
-      const token = saved_user.generateConfirmationToken();
+      // Generate confirmation token
+      const token = jwt.sign({ email: saved_user.email }, secret.jwt_secret, { expiresIn: '10m' });
+      await saved_user.update({
+        confirmation_token: token,
+        confirmation_token_expires: new Date(Date.now() + 10 * 60 * 1000),
+      });
 
-      await saved_user.save({ validateBeforeSave: false });
-
+      // Gửi mail xác thực
       const mailData = {
         from: secret.email_user,
-        to: `${req.body.email}`,
-        subject: "Email Activation",
+        to: req.body.email,
         subject: "Verify Your Email",
         html: `<h2>Hello ${req.body.name}</h2>
-        <p>Verify your email address to complete the signup and login into your <strong>shofy</strong> account.</p>
-  
+          <p>Verify your email address to complete the signup and login into your <strong>shofy</strong> account.</p>
           <p>This link will expire in <strong> 10 minute</strong>.</p>
-  
           <p style="margin-bottom:20px;">Click this link for active your account</p>
-  
           <a href="${secret.client_url}/email-verify/${token}" style="background:#0989FF;color:white;border:1px solid #0989FF; padding: 10px 15px; border-radius: 4px; text-decoration:none;">Verify Account</a>
-  
           <p style="margin-top: 35px;">If you did not initiate this request, please contact us immediately at support@shofy.com</p>
-  
           <p style="margin-bottom:0px;">Thank you</p>
           <strong>shofy Team</strong>
-           `,
+        `,
       };
       const message = "Please check your email to verify!";
       sendEmail(mailData, res, message);
@@ -46,21 +49,10 @@ exports.signup = async (req, res,next) => {
   }
 };
 
-/**
- * 1. Check if Email and password are given
- * 2. Load user with email
- * 3. if not user send res
- * 4. compare password
- * 5. if password not correct send res
- * 6. check if user is active
- * 7. if not active send res
- * 8. generate token
- * 9. send user and token
- */
-module.exports.login = async (req, res,next) => {
+// Đăng nhập user
+exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return res.status(401).json({
         status: "fail",
@@ -68,7 +60,7 @@ module.exports.login = async (req, res,next) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ where: { email } });
 
     if (!user) {
       return res.status(401).json({
@@ -77,7 +69,7 @@ module.exports.login = async (req, res,next) => {
       });
     }
 
-    const isPasswordValid = user.comparePassword(password, user.password);
+    const isPasswordValid = bcrypt.compareSync(password, user.password);
 
     if (!isPasswordValid) {
       return res.status(403).json({
@@ -86,7 +78,7 @@ module.exports.login = async (req, res,next) => {
       });
     }
 
-    if (user.status != "active") {
+    if (user.status !== "active") {
       return res.status(401).json({
         status: "fail",
         error: "Your account is not active yet.",
@@ -94,8 +86,7 @@ module.exports.login = async (req, res,next) => {
     }
 
     const token = generateToken(user);
-
-    const { password: pwd, ...others } = user.toObject();
+    const { password: pwd, ...others } = user.toJSON();
 
     res.status(200).json({
       status: "success",
@@ -110,11 +101,11 @@ module.exports.login = async (req, res,next) => {
   }
 };
 
-// confirmEmail
-exports.confirmEmail = async (req, res,next) => {
+// Xác nhận email
+exports.confirmEmail = async (req, res, next) => {
   try {
     const { token } = req.params;
-    const user = await User.findOne({ confirmationToken: token });
+    const user = await User.findOne({ where: { confirmation_token: token } });
 
     if (!user) {
       return res.status(403).json({
@@ -123,7 +114,7 @@ exports.confirmEmail = async (req, res,next) => {
       });
     }
 
-    const expired = new Date() > new Date(user.confirmationTokenExpires);
+    const expired = new Date() > new Date(user.confirmation_token_expires);
 
     if (expired) {
       return res.status(401).json({
@@ -132,15 +123,14 @@ exports.confirmEmail = async (req, res,next) => {
       });
     }
 
-    user.status = "active";
-    user.confirmationToken = undefined;
-    user.confirmationTokenExpires = undefined;
-
-    await user.save({ validateBeforeSave: false });
+    await user.update({
+      status: "active",
+      confirmation_token: null,
+      confirmation_token_expires: null,
+    });
 
     const accessToken = generateToken(user);
-
-    const { password: pwd, ...others } = user.toObject();
+    const { password: pwd, ...others } = user.toJSON();
 
     res.status(200).json({
       status: "success",
@@ -155,41 +145,33 @@ exports.confirmEmail = async (req, res,next) => {
   }
 };
 
-// forgetPassword
-exports.forgetPassword = async (req, res,next) => {
+// Quên mật khẩu (gửi mail reset)
+exports.forgetPassword = async (req, res, next) => {
   try {
     const { verifyEmail } = req.body;
-    const user = await User.findOne({ email: verifyEmail });
+    const user = await User.findOne({ where: { email: verifyEmail } });
     if (!user) {
-      return res.status(404).send({
-        message: "User Not found with this email!",
-      });
+      return res.status(404).send({ message: "User Not found with this email!" });
     } else {
-      const token = tokenForVerify(user);
+      const token = jwt.sign({ email: user.email }, secret.jwt_secret, { expiresIn: '10m' });
+      await user.update({
+        confirmation_token: token,
+        confirmation_token_expires: new Date(Date.now() + 10 * 60 * 1000)
+      });
       const body = {
         from: secret.email_user,
-        to: `${verifyEmail}`,
+        to: verifyEmail,
         subject: "Password Reset",
         html: `<h2>Hello ${verifyEmail}</h2>
-        <p>A request has been received to change the password for your <strong>Shofy</strong> account </p>
-
-        <p>This link will expire in <strong> 10 minute</strong>.</p>
-
-        <p style="margin-bottom:20px;">Click this link for reset your password</p>
-
-        <a href=${secret.client_url}/forget-password/${token} style="background:#0989FF;color:white;border:1px solid #0989FF; padding: 10px 15px; border-radius: 4px; text-decoration:none;">Reset Password</a>
-
-        <p style="margin-top: 35px;">If you did not initiate this request, please contact us immediately at support@shofy.com</p>
-
-        <p style="margin-bottom:0px;">Thank you</p>
-        <strong>Shofy Team</strong>
+          <p>A request has been received to change the password for your <strong>Shofy</strong> account </p>
+          <p>This link will expire in <strong> 10 minute</strong>.</p>
+          <p style="margin-bottom:20px;">Click this link for reset your password</p>
+          <a href=${secret.client_url}/forget-password/${token} style="background:#0989FF;color:white;border:1px solid #0989FF; padding: 10px 15px; border-radius: 4px; text-decoration:none;">Reset Password</a>
+          <p style="margin-top: 35px;">If you did not initiate this request, please contact us immediately at support@shofy.com</p>
+          <p style="margin-bottom:0px;">Thank you</p>
+          <strong>Shofy Team</strong>
         `,
       };
-      user.confirmationToken = token;
-      const date = new Date();
-      date.setDate(date.getDate() + 1);
-      user.confirmationTokenExpires = date;
-      await user.save({ validateBeforeSave: false });
       const message = "Please check your email to reset password!";
       sendEmail(body, res, message);
     }
@@ -198,11 +180,11 @@ exports.forgetPassword = async (req, res,next) => {
   }
 };
 
-// confirm-forget-password
-exports.confirmForgetPassword = async (req, res,next) => {
+// Xác nhận đổi mật khẩu khi quên
+exports.confirmForgetPassword = async (req, res, next) => {
   try {
     const { token, password } = req.body;
-    const user = await User.findOne({ confirmationToken: token });
+    const user = await User.findOne({ where: { confirmation_token: token } });
 
     if (!user) {
       return res.status(403).json({
@@ -211,7 +193,7 @@ exports.confirmForgetPassword = async (req, res,next) => {
       });
     }
 
-    const expired = new Date() > new Date(user.confirmationTokenExpires);
+    const expired = new Date() > new Date(user.confirmation_token_expires);
 
     if (expired) {
       return res.status(401).json({
@@ -220,15 +202,11 @@ exports.confirmForgetPassword = async (req, res,next) => {
       });
     } else {
       const newPassword = bcrypt.hashSync(password);
-      await User.updateOne(
-        { confirmationToken: token },
-        { $set: { password: newPassword } }
-      );
-
-      user.confirmationToken = undefined;
-      user.confirmationTokenExpires = undefined;
-
-      await user.save({ validateBeforeSave: false });
+      await user.update({
+        password: newPassword,
+        confirmation_token: null,
+        confirmation_token_expires: null,
+      });
 
       res.status(200).json({
         status: "success",
@@ -240,26 +218,25 @@ exports.confirmForgetPassword = async (req, res,next) => {
   }
 };
 
-// change password
-exports.changePassword = async (req, res,next) => {
+// Đổi mật khẩu
+exports.changePassword = async (req, res, next) => {
   try {
-    const {email,password,googleSignIn,newPassword} = req.body || {};
-    const user = await User.findOne({ email: email });
-    // Check if the user exists
+    const { email, password, googleSignIn, newPassword } = req.body || {};
+    const user = await User.findOne({ where: { email } });
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if(googleSignIn){
+    if (googleSignIn) {
       const hashedPassword = bcrypt.hashSync(newPassword);
-      await User.updateOne({email:email},{password:hashedPassword})
+      await user.update({ password: hashedPassword });
       return res.status(200).json({ message: "Password changed successfully" });
     }
-    if(!bcrypt.compareSync(password, user?.password)){
+    if (!bcrypt.compareSync(password, user.password)) {
       return res.status(401).json({ message: "Incorrect current password" });
-    }
-    else {
+    } else {
       const hashedPassword = bcrypt.hashSync(newPassword);
-      await User.updateOne({email:email},{password:hashedPassword})
+      await user.update({ password: hashedPassword });
       res.status(200).json({ message: "Password changed successfully" });
     }
   } catch (error) {
@@ -267,24 +244,25 @@ exports.changePassword = async (req, res,next) => {
   }
 };
 
-// update a profile
-exports.updateUser = async (req, res,next) => {
+// Cập nhật profile
+exports.updateUser = async (req, res, next) => {
   try {
-    const userId = req.params.id
-    const user = await User.findById(userId);
+    const userId = req.params.id;
+    const user = await User.findByPk(userId);
     if (user) {
-      user.name = req.body.name;
-      user.email = req.body.email;
-      user.phone = req.body.phone;
-      user.address = req.body.address;
-      user.bio = req.body.bio; 
-      const updatedUser = await user.save();
-      const token = generateToken(updatedUser);
+      await user.update({
+        name: req.body.name,
+        email: req.body.email,
+        phone: req.body.phone,
+        address: req.body.address,
+        bio: req.body.bio,
+      });
+      const token = generateToken(user);
       res.status(200).json({
         status: "success",
         message: "Successfully updated profile",
         data: {
-          user: updatedUser,
+          user: user,
           token,
         },
       });
@@ -294,11 +272,11 @@ exports.updateUser = async (req, res,next) => {
   }
 };
 
-// signUpWithProvider
-exports.signUpWithProvider = async (req, res,next) => {
+// Đăng ký với Google, Facebook provider
+exports.signUpWithProvider = async (req, res, next) => {
   try {
-    const user = jwt.decode(req.params.token);
-    const isAdded = await User.findOne({ email: user.email });
+    const userData = jwt.decode(req.params.token);
+    const isAdded = await User.findOne({ where: { email: userData.email } });
     if (isAdded) {
       const token = generateToken(isAdded);
       res.status(200).send({
@@ -306,37 +284,35 @@ exports.signUpWithProvider = async (req, res,next) => {
         data: {
           token,
           user: {
-            _id: isAdded._id,
+            id: isAdded.id,
             name: isAdded.name,
             email: isAdded.email,
             address: isAdded.address,
             phone: isAdded.phone,
-            imageURL: isAdded.imageURL,
-            googleSignIn:true,
+            image_url: isAdded.image_url,
+            googleSignIn: true,
           },
         },
       });
     } else {
-      const newUser = new User({
-        name: user.name,
-        email: user.email,
-        imageURL: user.picture,
+      const newUser = await User.create({
+        name: userData.name,
+        email: userData.email,
+        image_url: userData.picture,
         status: 'active'
       });
 
-      const signUpUser = await newUser.save();
-      // console.log(signUpUser)
-      const token = generateToken(signUpUser);
+      const token = generateToken(newUser);
       res.status(200).send({
         status: "success",
         data: {
           token,
           user: {
-            _id: signUpUser._id,
-            name: signUpUser.name,
-            email: signUpUser.email,
-            imageURL: signUpUser.imageURL,
-            googleSignIn:true,
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            image_url: newUser.image_url,
+            googleSignIn: true,
           }
         },
       });

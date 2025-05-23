@@ -1,111 +1,28 @@
-const mongoose = require("mongoose");
-const validator = require("validator");
-const crypto = require("crypto");
-const bcrypt = require("bcryptjs");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/db");
 
-const userSchema = mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, "Please provide a name"],
-      trim: true,
-      minLength: [3, "Name must be at least 3 characters."],
-      maxLength: [100, "Name is too large"],
-    },
-    email: {
-      type: String,
-      validate: [validator.isEmail, "Provide a valid Email"],
-      trim: true,
-      lowercase: true,
-      unique: true,
-      required: [true, "Email address is required"],
-    },
-    password: {
-      type: String,
-      required: [false, "Password is required"],
-      minLength: [6, "Must be at least 6 character"],
-    },
-
-    role: {
-      type: String,
-      enum: ["user", "admin"],
-      default: "user",
-    },
-
-    contactNumber: {
-      type: String,
-      validate: [
-        validator.isMobilePhone,
-        "Please provide a valid contact number",
-      ],
-    },
-
-    shippingAddress: String,
-
-    imageURL: {
-      type: String,
-      validate: [validator.isURL, "Please provide a valid url"],
-    },
-    phone: {
-      type: String,
-      required: false,
-    },
-    address: {
-      type: String,
-      required: false,
-    },
-    bio: {
-      type: String,
-      required: false,
-    },
-    status: {
-      type: String,
-      default: "inactive",
-      enum: ["active", "inactive", "blocked"],
-    },
-    reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Reviews" }],
-    confirmationToken: String,
-    confirmationTokenExpires: Date,
-
-    passwordChangedAt: Date,
-    passwordResetToken: String,
-    passwordResetExpires: Date,
-  },
-  {
-    timestamps: true,
-  }
-);
-
-userSchema.pre("save", function (next) {
-  if (!this.isModified("password")) {
-    //  only run if password is modified, otherwise it will change every time we save the user!
-    return next();
-  }
-  const password = this.password;
-  const hashedPassword = bcrypt.hashSync(password);
-  this.password = hashedPassword;
-
-  next();
+const User = sequelize.define("User", {
+  id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+  name: { type: DataTypes.STRING(100), allowNull: false },
+  email: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+  password: { type: DataTypes.STRING(255) },
+  role: { type: DataTypes.ENUM("user", "admin"), defaultValue: "user" },
+  contact_number: { type: DataTypes.STRING(20) },
+  shipping_address: { type: DataTypes.TEXT },
+  image_url: { type: DataTypes.STRING(255) },
+  phone: { type: DataTypes.STRING(20) },
+  address: { type: DataTypes.TEXT },
+  bio: { type: DataTypes.TEXT },
+  status: { type: DataTypes.ENUM("active", "inactive", "blocked"), defaultValue: "inactive" },
+  confirmation_token: { type: DataTypes.STRING(255) },
+  confirmation_token_expires: { type: DataTypes.DATE },
+  password_changed_at: { type: DataTypes.DATE },
+  password_reset_token: { type: DataTypes.STRING(255) },
+  password_reset_expires: { type: DataTypes.DATE }
+}, {
+  tableName: "users",
+  underscored: true,
+  timestamps: true
 });
-// comparePassword
-userSchema.methods.comparePassword = function (password, hash) {
-  const isPasswordValid = bcrypt.compareSync(password, hash);
-  return isPasswordValid;
-};
-// generateConfirmationToken
-userSchema.methods.generateConfirmationToken = function () {
-  const token = crypto.randomBytes(32).toString("hex");
-
-  this.confirmationToken = token;
-
-  const date = new Date();
-
-  date.setDate(date.getDate() + 1);
-  this.confirmationTokenExpires = date;
-
-  return token;
-};
-
-const User = mongoose.model("User", userSchema);
 
 module.exports = User;

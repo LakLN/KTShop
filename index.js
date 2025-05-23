@@ -1,69 +1,79 @@
 require("dotenv").config();
 const express = require("express");
-const app = express();
-const path = require('path');
+const path = require("path");
 const cors = require("cors");
-const connectDB = require("./config/db");
-const { secret } = require("./config/secret");
-const PORT = secret.port || 7000;
-const morgan = require('morgan')
-const setupSwagger = require('./swagger')
-// error handler
+const morgan = require("morgan");
+const setupSwagger = require("./swagger");
 const globalErrorHandler = require("./middleware/global-error-handler");
-// routes
-const userRoutes = require("./routes/user.routes");
-const categoryRoutes = require("./routes/category.routes");
-const brandRoutes = require("./routes/brand.routes");
-const userOrderRoutes = require("./routes/user.order.routes");
-const productRoutes = require("./routes/product.routes");
-const orderRoutes = require("./routes/order.routes");
-const couponRoutes = require("./routes/coupon.routes");
-const reviewRoutes = require("./routes/review.routes");
-const adminRoutes = require("./routes/admin.routes");
-// const uploadRouter = require('./routes/uploadFile.route');
+
+// Sequelize instance
+const sequelize = require("./config/db");
+
+// Routes
+const userRoutes       = require("./routes/user.routes");
+const categoryRoutes   = require("./routes/category.routes");
+const brandRoutes      = require("./routes/brand.routes");
+const productRoutes    = require("./routes/product.routes");
+const orderRoutes      = require("./routes/order.routes");
+const userOrderRoutes  = require("./routes/user.order.routes");
+const couponRoutes     = require("./routes/coupon.routes");
+const reviewRoutes     = require("./routes/review.routes");
+const adminRoutes      = require("./routes/admin.routes");
 const cloudinaryRoutes = require("./routes/cloudinary.routes");
 
-// middleware
+const PORT = process.env.PORT || 7000;
+const app  = express();
+
+// --- Middleware ---
 app.use(cors());
 app.use(express.json());
-app.use(morgan('dev'));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(morgan("dev"));
+app.use(express.static(path.join(__dirname, "public")));
 
-// connect database
-connectDB();
+// --- Swagger docs ---
 setupSwagger(app);
-app.use("/api/user", userRoutes);
-app.use("/api/category", categoryRoutes);
-app.use("/api/brand", brandRoutes);
-app.use("/api/product", productRoutes);
-// app.use('/api/upload',uploadRouter);
-app.use("/api/order", orderRoutes);
-app.use("/api/coupon", couponRoutes);
+
+// --- Mount routes ---
+app.use("/api/user",       userRoutes);
+app.use("/api/category",   categoryRoutes);
+app.use("/api/brand",      brandRoutes);
+app.use("/api/product",    productRoutes);
+app.use("/api/order",      orderRoutes);
 app.use("/api/user-order", userOrderRoutes);
-app.use("/api/review", reviewRoutes);
+app.use("/api/coupon",     couponRoutes);
+app.use("/api/review",     reviewRoutes);
+app.use("/api/admin",      adminRoutes);
 app.use("/api/cloudinary", cloudinaryRoutes);
-app.use("/api/admin", adminRoutes);
 
-// root route
-app.get("/", (req, res) => res.send("Apps worked successfully"));
+// --- Root & 404 handler ---
+app.get("/", (req, res) => res.send("App working successfully"));
 
-app.listen(PORT, () => console.log(`server running on port ${PORT}`));
-
-// global error handler
 app.use(globalErrorHandler);
-//* handle not found
-app.use((req, res, next) => {
+
+app.use((req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Not Found',
-    errorMessages: [
-      {
-        path: req.originalUrl,
-        message: 'API Not Found',
-      },
-    ],
+    message: "API Not Found",
+    errorMessages: [{ path: req.originalUrl, message: "Not Found" }],
   });
-  next();
 });
+
+// --- Connect to MySQL & start server ---
+(async () => {
+  try {
+    await sequelize.authenticate();
+    console.log("✔️  MySQL connected.");
+    // Trong dev bạn có thể dùng { alter: true } để tự động điều chỉnh bảng
+    await sequelize.sync({ alter: true });
+    console.log("✔️  Models synchronized.");
+    
+    app.listen(PORT, () =>
+      console.log(`Server running on port ${PORT}`)
+    );
+  } catch (err) {
+    console.error("Unable to connect to database:", err);
+    process.exit(1);
+  }
+})();
 
 module.exports = app;

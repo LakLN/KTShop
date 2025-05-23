@@ -1,48 +1,19 @@
-const mongoose = require("mongoose");
-const validator = require("validator");
-const { ObjectId } = mongoose.Schema.Types;
+const { DataTypes } = require("sequelize");
+const sequelize = require("../config/db");
 
-const brandSchema = mongoose.Schema({
-  logo: {
-    type: String,
-    required: false,
-    validate: [validator.isURL, "Please provide valid url(s)"]
-  },
-  name: {
-    type: String,
-    trim: true,
-    required: [true, "Please provide a brand name"],
-    maxLength: 100,
-    unique: true,
-  },
-  description: String,
-  email: {
-    type: String,
-    lowercase: true,
-    validate: [validator.isEmail, "Please provide a valid email"]
-  },
-  website: {
-    type: String,
-    validate: [validator.isURL, "Please provide a valid url"]
-  },
-  location: String,
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active"
-  },
-  products: [{
-    type: ObjectId,
-    ref: "Products"
-  }],
+const Brand = sequelize.define("Brand", {
+  id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
+  logo: { type: DataTypes.TEXT },
+  name: { type: DataTypes.STRING(100), allowNull: false, unique: true },
+  description: { type: DataTypes.TEXT },
+  email: { type: DataTypes.STRING(255) },
+  website: { type: DataTypes.STRING(255) },
+  location: { type: DataTypes.STRING(255) },
+  status: { type: DataTypes.ENUM("active", "inactive"), defaultValue: "active" }
 }, {
+  tableName: "brands",
+  underscored: true,
   timestamps: true
 });
 
-const Brand = mongoose.model("Brand", brandSchema);
-
 module.exports = Brand;
-
-
-
-
