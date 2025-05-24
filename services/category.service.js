@@ -7,11 +7,12 @@ exports.createCategoryService = async (data) => {
   return category;
 };
 
-// Thêm mới toàn bộ categories (xoá hết cũ, rồi thêm mới)
+
 exports.addAllCategoryService = async (data) => {
-  await Category.destroy({ where: {} });
-  const categories = await Category.bulkCreate(data);
-  return categories;
+  for (const item of data) {
+    await Category.upsert(item);
+  }
+  return await Category.findAll();
 };
 
 // Lấy category có status 'Show' (và kèm products nếu có)
