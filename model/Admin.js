@@ -14,7 +14,7 @@ const Admin = sequelize.define("Admin", {
   password: { type: DataTypes.STRING(255), allowNull: false },
   role: { type: DataTypes.ENUM("Admin", "Super Admin", "Manager", "CEO"), defaultValue: "Admin" },
   joining_date: { type: DataTypes.DATE },
-  confirmation_token: { type: DataTypes.STRING(255) },
+  confirmation_token: { type: DataTypes.STRING(1024) },
   confirmation_token_expires: { type: DataTypes.DATE }
 }, {
   tableName: "admins",
