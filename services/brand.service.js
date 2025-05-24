@@ -8,11 +8,14 @@ exports.addBrandService = async (data) => {
 };
 
 // Thêm mới toàn bộ Brand (xoá hết cũ rồi thêm mới)
-exports.addAllBrandService = async (data) => {
-  await Brand.destroy({ where: {} });
-  const brands = await Brand.bulkCreate(data);
-  return brands;
+exports.addAllBrandService = async (brandsArray) => {
+  // Cách 1: upsert từng brand
+  for (const item of brandsArray) {
+    await Brand.upsert(item);
+  }
+  return await Brand.findAll();
 };
+
 
 // Lấy tất cả Brand active (kèm products nếu muốn)
 exports.getBrandsService = async () => {
