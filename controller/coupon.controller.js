@@ -1,17 +1,12 @@
-const { Coupon } = require('../model');
-const dayjs = require('dayjs');
-const utc = require('dayjs/plugin/utc');
-dayjs.extend(utc);
+const { Coupon } = require("../model"); 
 
 // Thêm 1 coupon
 const addCoupon = async (req, res, next) => {
   try {
     const data = { ...req.body };
-    if (!data.start_time) {
-      data.start_time = new Date();
-    }
+    if (!data.start_time) data.start_time = new Date();
     await Coupon.create(data);
-    res.send({ message: 'Coupon Added Successfully!' });
+    res.json({ message: 'Coupon Added Successfully!' });
   } catch (error) {
     next(error);
   }
@@ -22,9 +17,7 @@ const addAllCoupon = async (req, res, next) => {
   try {
     await Coupon.destroy({ where: {} });
     await Coupon.bulkCreate(req.body);
-    res.status(200).send({
-      message: 'Coupon Added successfully!',
-    });
+    res.json({ message: 'Coupon Added successfully!' });
   } catch (error) {
     next(error);
   }
@@ -33,10 +26,8 @@ const addAllCoupon = async (req, res, next) => {
 // Lấy toàn bộ coupon
 const getAllCoupons = async (req, res, next) => {
   try {
-    const coupons = await Coupon.findAll({
-      order: [['id', 'DESC']],
-    });
-    res.send(coupons);
+    const coupons = await Coupon.findAll({ order: [['id', 'DESC']] });
+    res.json(coupons);
   } catch (error) {
     next(error);
   }
@@ -46,7 +37,8 @@ const getAllCoupons = async (req, res, next) => {
 const getCouponById = async (req, res, next) => {
   try {
     const coupon = await Coupon.findByPk(req.params.id);
-    res.send(coupon);
+    if (!coupon) return res.status(404).json({ message: 'Coupon not found!' });
+    res.json(coupon);
   } catch (error) {
     next(error);
   }
@@ -56,19 +48,9 @@ const getCouponById = async (req, res, next) => {
 const updateCoupon = async (req, res, next) => {
   try {
     const coupon = await Coupon.findByPk(req.params.id);
-    if (coupon) {
-      coupon.title = req.body.title;
-      coupon.coupon_code = req.body.coupon_code;
-      coupon.end_time = req.body.end_time; // hoặc dayjs(req.body.end_time).utc().toDate() nếu cần
-      coupon.discount_percentage = req.body.discount_percentage;
-      coupon.minimum_amount = req.body.minimum_amount;
-      coupon.product_type = req.body.product_type;
-      coupon.logo = req.body.logo;
-      await coupon.save();
-      res.send({ message: 'Coupon Updated Successfully!' });
-    } else {
-      res.status(404).send({ message: 'Coupon not found!' });
-    }
+    if (!coupon) return res.status(404).json({ message: 'Coupon not found!' });
+    await coupon.update(req.body);
+    res.json({ message: 'Coupon Updated Successfully!' });
   } catch (error) {
     next(error);
   }
@@ -77,11 +59,9 @@ const updateCoupon = async (req, res, next) => {
 // Xoá coupon
 const deleteCoupon = async (req, res, next) => {
   try {
-    await Coupon.destroy({ where: { id: req.params.id } });
-    res.status(200).json({
-      success: true,
-      message: 'Coupon delete successfully',
-    });
+    const deleted = await Coupon.destroy({ where: { id: req.params.id } });
+    if (!deleted) return res.status(404).json({ message: 'Coupon not found!' });
+    res.json({ message: 'Coupon deleted successfully' });
   } catch (error) {
     next(error);
   }
