@@ -11,9 +11,9 @@ const Review    = require("./Review");
 
 Product.belongsTo(Brand,    { foreignKey: "brand_id" });
 Product.belongsTo(Category, { foreignKey: "category_id" });
-
+Product.hasMany(Review, { foreignKey: 'product_id', as: 'reviews' });
+Review.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
 Review.belongsTo(User,      { foreignKey: "user_id" });
-Review.belongsTo(Product,   { foreignKey: "product_id" });
 Order.belongsTo(User, { as: 'user', foreignKey: 'user_id' });
 User.hasMany(Order, { foreignKey: 'user_id' });
 
