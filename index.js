@@ -20,6 +20,7 @@ const couponRoutes     = require("./routes/coupon.routes");
 const reviewRoutes     = require("./routes/review.routes");
 const adminRoutes      = require("./routes/admin.routes");
 const cloudinaryRoutes = require("./routes/cloudinary.routes");
+const wishlistRoutes   = require("./routes/wishlist.routes");
 
 const PORT = process.env.PORT || 7000;
 const app  = express();
@@ -44,6 +45,7 @@ app.use("/api/coupon",     couponRoutes);
 app.use("/api/review",     reviewRoutes);
 app.use("/api/admin",      adminRoutes);
 app.use("/api/cloudinary", cloudinaryRoutes);
+app.use("/api/wishlist",   wishlistRoutes);
 
 // --- Root & 404 handler ---
 app.get("/", (req, res) => res.send("App working successfully"));

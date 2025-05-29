@@ -8,6 +8,7 @@ const Product   = require("./Product");
 const Coupon    = require("./Coupon");
 const Order     = require("./Order");
 const Review    = require("./Review");
+const Wishlist = require("./Wishlist");
 
 // model/index.js
 
@@ -33,5 +34,6 @@ module.exports = {
   Product,
   Coupon,
   Order,
-  Review
+  Review,
+  Wishlist
 };

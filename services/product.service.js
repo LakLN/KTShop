@@ -184,3 +184,9 @@ exports.getStockOutProducts = async () => {
 exports.deleteProduct = async (id) => {
   return await Product.destroy({ where: { id } });
 };
+
+// Thêm sản phẩm mới (1 sản phẩm)
+exports.createProductService = async (data) => {
+  const product = await Product.create(data);
+  return product;
+};
