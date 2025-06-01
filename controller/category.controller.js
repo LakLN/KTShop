@@ -125,3 +125,17 @@ exports.getSingleCategory = async (req, res, next) => {
     next(error);
   }
 };
+// Xoá mềm category (chuyển status thành "Hide")
+exports.softDeleteCategory = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const updated = await categoryServices.updateCategoryService(id, { status: "Hide" });
+    res.status(200).json({
+      success: true,
+      message: "Category has been hidden (soft deleted)",
+      result: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
