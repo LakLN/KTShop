@@ -139,3 +139,16 @@ exports.softDeleteCategory = async (req, res, next) => {
     next(error);
   }
 };
+exports.restoreCategory = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const updated = await categoryServices.updateCategoryService(id, { status: "Show" });
+    res.status(200).json({
+      success: true,
+      message: "Category restored successfully",
+      result: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
