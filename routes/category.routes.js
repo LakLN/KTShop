@@ -196,8 +196,8 @@ router.delete('/delete/:id', categoryController.deleteCategory);
  *         description: Server error
  */
 router.patch('/edit/:id', categoryController.updateCategory);
-router.patch('/category/:id/soft-delete', categoryController.softDeleteCategory);
-router.patch('/category/:id/restore', categoryController.restoreCategory);
+router.patch('/:id/soft-delete', categoryController.softDeleteCategory);
+router.patch('/:id/restore', categoryController.restoreCategory);
 
 
 module.exports = router;
