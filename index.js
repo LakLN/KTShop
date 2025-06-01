@@ -65,7 +65,6 @@ app.use((req, res) => {
   try {
     await sequelize.authenticate();
     console.log("✔️  MySQL connected.");
-    // Trong dev bạn có thể dùng { alter: true } để tự động điều chỉnh bảng
     await sequelize.sync({ alter: true });
     console.log("✔️  Models synchronized.");
     

@@ -20,7 +20,7 @@ exports.signup = async (req, res, next) => {
       // Tạo user
       const saved_user = await User.create(req.body);
       // Generate confirmation token
-      const token = jwt.sign({ email: saved_user.email }, secret.jwt_secret, { expiresIn: '10m' });
+      const token = jwt.sign({ email: saved_user.email }, secret.jwt_secret_for_verify, { expiresIn: '10m' });
       await saved_user.update({
         confirmation_token: token,
         confirmation_token_expires: new Date(Date.now() + 10 * 60 * 1000),
