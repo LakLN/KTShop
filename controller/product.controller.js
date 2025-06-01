@@ -1,31 +1,38 @@
-const productServices = require("../services/product.service");
-
-const excludedParents = [
-  "Facial Care",
-  "Awesome Lip Care",
-  "Beauty of Skin",
-  "Discover Skincare",
-  "Bluetooth",
-  "Smart Watch",
-  "CPU Heat Pipes",
-  "Mobile Tablets",
-  "Headphones"
-];
-
 // Thêm sản phẩm mới
+const productServices = require("../services/product.service");
+const cloudinary = require('../utils/cloudinary');
+
+// Thêm sản phẩm mới với upload ảnh lên cloudinary
 exports.addProduct = async (req, res, next) => {
   try {
-    const firstItem = {
-      color: {
-        name: '',
-        clrCode: ''
-      },
-      img: req.body.img,
-    };
-    const imageURLs = [firstItem, ...(req.body.imageURLs || [])];
+    // Upload field img
+    let mainImgUrl = "";
+    if (req.files && req.files['img'] && req.files['img'][0]) {
+      mainImgUrl = req.files['img'][0].path; // Cloudinary sẽ trả về .path là URL public
+    }
+
+    // Upload các ảnh phụ (nếu có)
+    let imageURLs = [];
+    if (req.files && req.files['imageURLs']) {
+      imageURLs = req.files['imageURLs'].map(file => ({
+        color: { name: '', clrCode: '' }, // sửa theo UI của bạn
+        img: file.path
+      }));
+    }
+
+    // Nếu có dữ liệu imageURLs từ body (dạng json), merge luôn
+    if (req.body.imageURLs) {
+      let bodyImages = [];
+      try {
+        bodyImages = JSON.parse(req.body.imageURLs);
+      } catch (err) { /* ignore parse error */ }
+      imageURLs = imageURLs.concat(bodyImages);
+    }
+
     const result = await productServices.createProductService({
       ...req.body,
-      image_urls: imageURLs, // đổi đúng theo schema Sequelize
+      img: mainImgUrl,
+      image_urls: imageURLs
     });
 
     res.status(200).json({
@@ -38,6 +45,7 @@ exports.addProduct = async (req, res, next) => {
     next(error);
   }
 };
+
 
 // Thêm nhiều sản phẩm
 exports.addAllProducts = async (req, res, next) => {

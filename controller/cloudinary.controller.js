@@ -1,42 +1,26 @@
-const fs = require("fs");
-const { cloudinaryServices } = require("../services/cloudinary.service");
+// controller/cloudinary.controller.js
+const { cloudinaryImageUpload, cloudinaryImageDelete } = require('../utils/cloudinary');
 
-// Upload một ảnh lên Cloudinary (ảnh đơn)
-const saveImageCloudinary = async (req, res, next) => {
+exports.saveImageCloudinary = async (req, res, next) => {
   try {
-    // Lưu ý req.file.buffer chỉ dùng nếu bạn cấu hình multer với storage: memoryStorage()
-    const result = await cloudinaryServices.cloudinaryImageUpload(req.file.buffer);
+    if (!req.file) return res.status(400).json({ success: false, message: "No file uploaded" });
+    const result = await cloudinaryImageUpload(req.file.buffer);
     res.status(200).json({
       success: true,
-      message: "Image uploaded successfully",
-      data: {
-        url: result.secure_url,
-        id: result.public_id,
-      },
+      url: result.secure_url,
+      public_id: result.public_id
     });
-  } catch (err) {
-    console.error(err);
-    next(err);
+  } catch (error) {
+    next(error);
   }
 };
 
-// Upload nhiều ảnh lên Cloudinary (ảnh mảng)
-const addMultipleImageCloudinary = async (req, res) => {
+exports.addMultipleImageCloudinary = async (req, res, next) => {
   try {
-    const files = req.files;
-    const uploadResults = [];
-
-    for (const file of files) {
-      // Nếu dùng diskStorage, bạn upload bằng file.path
-      const result = await cloudinaryServices.cloudinaryImageUpload(file.path);
-      uploadResults.push(result);
-    }
-
-    // Xoá file local sau upload (nếu dùng diskStorage)
-    for (const file of files) {
-      fs.unlinkSync(file.path);
-    }
-
+    if (!req.files) return res.status(400).json({ success: false, message: "No files uploaded" });
+    const uploadResults = await Promise.all(
+      req.files.map(file => cloudinaryImageUpload(file.buffer))
+    );
     res.status(200).json({
       success: true,
       message: "Images uploaded successfully",
@@ -45,38 +29,21 @@ const addMultipleImageCloudinary = async (req, res) => {
         id: res.public_id,
       })),
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send({
-      success: false,
-      message: "Failed to upload images",
-    });
+  } catch (error) {
+    next(error);
   }
 };
 
-// Xoá ảnh trên Cloudinary
-const cloudinaryDeleteController = async (req, res) => {
+exports.cloudinaryDeleteController = async (req, res) => {
   try {
-    const { folder_name, id } = req.query;
-    // public_id đúng định dạng Cloudinary lưu file: 'folder_name/id'
-    const public_id = `${folder_name}/${id}`;
-    const result = await cloudinaryServices.cloudinaryImageDelete(public_id);
-    res.status(200).json({
-      success: true,
-      message: "Delete image successfully",
-      data: result,
-    });
+    const { public_id } = req.body;
+    if (!public_id) return res.status(400).json({ success: false, message: "Missing public_id" });
+    await cloudinaryImageDelete(public_id);
+    res.status(200).json({ success: true, message: "Image deleted successfully!" });
   } catch (err) {
-    console.error(err);
     res.status(500).send({
       success: false,
       message: "Failed to delete image",
     });
   }
-};
-
-module.exports = {
-  saveImageCloudinary,
-  addMultipleImageCloudinary,
-  cloudinaryDeleteController,
 };
