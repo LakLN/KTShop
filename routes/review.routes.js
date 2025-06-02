@@ -52,7 +52,7 @@ router.post("/add", addReview);
  *         description: Review not found
  */
 router.delete("/delete/:id", deleteReviews);
-router.get('/reviews/:id', getAllReviewsByProduct);
-router.get('/reviews',getAllReviews);
+router.get('/:id', getAllReviewsByProduct);
+router.get('/all',getAllReviews);
 
 module.exports = router;

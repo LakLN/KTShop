@@ -83,14 +83,8 @@ exports.getAllReviews = async (req, res, next) => {
   try {
     const reviews = await Review.findAll({
       include: [
-        {
-          model: Product,
-          attributes: ['id', 'title', 'img'],
-        },
-        {
-          model: User,
-          attributes: ['id', 'name', 'avatar'],
-        }
+        { model: Product, as: 'product', attributes: ['id', 'title', 'img'] },
+        { model: User, as: 'user', attributes: ['id', 'name', 'avatar'] }
       ],
       order: [['createdAt', 'DESC']]
     });
