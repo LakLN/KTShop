@@ -173,5 +173,6 @@ router.get('/get/:id', brandController.getSingleBrand);
  *         description: Server error
  */
 router.patch('/edit/:id', brandController.updateBrand);
+router.patch('/change-status/:id', brandController.changeBrandStatus);
 
 module.exports = router;
