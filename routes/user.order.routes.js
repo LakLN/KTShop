@@ -82,6 +82,6 @@ router.get('/:id', userOrderController.getOrderById);
  *       200:
  *         description: User orders fetched successfully
  */
-router.get('/', verifyToken, userOrderController.getOrderByUser);
+router.get('/', userOrderController.getOrderByUser);
 
 module.exports = router;
