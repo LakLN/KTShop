@@ -1,6 +1,7 @@
 // Thêm sản phẩm mới
 const productServices = require("../services/product.service");
 const cloudinary = require('../utils/cloudinary');
+const { Brand, Category, Product, Review, User } = require("../model");
 
 // Thêm sản phẩm mới với upload ảnh lên cloudinary
 exports.addProduct = async (req, res, next) => {
