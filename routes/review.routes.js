@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { addReview, deleteReviews } = require("../controller/review.controller");
+const { addReview, deleteReviews,getAllReviewsByProduct,getAllReviews } = require("../controller/review.controller");
 
 /**
  * @swagger
@@ -52,7 +52,7 @@ router.post("/add", addReview);
  *         description: Review not found
  */
 router.delete("/delete/:id", deleteReviews);
-router.get('/reviews/:id', reviewController.getAllReviewsByProduct);
-router.get('/reviews', reviewController.getAllReviews);
+router.get('/reviews/:id', getAllReviewsByProduct);
+router.get('/reviews',getAllReviews);
 
 module.exports = router;
