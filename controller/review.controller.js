@@ -58,3 +58,45 @@ exports.deleteReviews = async (req, res, next) => {
     next(error);
   }
 };
+// Lấy tất cả review của 1 sản phẩm
+exports.getAllReviewsByProduct = async (req, res, next) => {
+  try {
+    const product_id = req.params.id; // id sản phẩm truyền trên URL
+    const reviews = await Review.findAll({
+      where: { product_id },
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'name', 'avatar'], // lấy thông tin user review nếu muốn
+        }
+      ],
+      order: [['createdAt', 'DESC']], // sắp xếp mới nhất lên đầu
+    });
+
+    res.json(reviews);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
+exports.getAllReviews = async (req, res, next) => {
+  try {
+    const reviews = await Review.findAll({
+      include: [
+        {
+          model: Product,
+          attributes: ['id', 'title', 'img'],
+        },
+        {
+          model: User,
+          attributes: ['id', 'name', 'avatar'],
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(reviews);
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+};
