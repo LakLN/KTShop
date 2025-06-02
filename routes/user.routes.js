@@ -201,5 +201,6 @@ router.put('/update-user/:id', userController.updateUser);
  */
 router.post("/register/:token", userController.signUpWithProvider);
 router.get("/profile/:id", userController.getProfile);
+router.get("/all", userController.getAllUsers);
 
 module.exports = router;
