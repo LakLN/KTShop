@@ -265,5 +265,7 @@ router.get('/:type', productController.getProductsByType);
  *         description: Product not found
  */
 router.delete('/:id', productController.deleteProduct);
+router.patch('/soft-delete/:id', productController.softDeleteProduct);
+router.get('/active', productController.getActiveProducts);
 
 module.exports = router;

@@ -195,3 +195,32 @@ exports.deleteProduct = async (req, res, next) => {
     next(error);
   }
 };
+// Xoá mềm: chỉ cập nhật status = "discontinued"
+exports.softDeleteProduct = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const result = await Product.update(
+      { status: "discontinued" },
+      { where: { id } }
+    );
+    if (result[0] === 0) {
+      return res.status(404).json({ message: "Product not found!" });
+    }
+    res.status(200).json({ message: "Product soft deleted (discontinued)!" });
+  } catch (error) {
+    next(error);
+  }
+};
+exports.getActiveProducts = async (req, res, next) => {
+  try {
+    const products = await Product.findAll({
+      where: { status: { [Op.ne]: "discontinued" } }
+    });
+    res.status(200).json({
+      success: true,
+      data: products
+    });
+  } catch (error) {
+    next(error);
+  }
+};
