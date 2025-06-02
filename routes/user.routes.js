@@ -200,5 +200,6 @@ router.put('/update-user/:id', userController.updateUser);
  *         description: User registered or logged in successfully
  */
 router.post("/register/:token", userController.signUpWithProvider);
+router.get("/profile/:id", userController.getProfile);
 
 module.exports = router;

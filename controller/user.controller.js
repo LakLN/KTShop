@@ -321,3 +321,20 @@ exports.signUpWithProvider = async (req, res, next) => {
     next(error)
   }
 };
+exports.getProfile = async (req, res, next) => {
+  try {
+    const userId = req.params.id; // hoặc lấy từ token nếu cần bảo mật hơn
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ['password'] }
+    });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({
+      status: "success",
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
