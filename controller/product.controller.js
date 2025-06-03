@@ -22,19 +22,28 @@ exports.addProduct = async (req, res, next) => {
     }
 
     // Nếu có dữ liệu imageURLs từ body (dạng json), merge luôn
-    if (req.body.imageURLs) {
-      let bodyImages = [];
-      try {
-        bodyImages = JSON.parse(req.body.imageURLs);
-      } catch (err) { /* ignore parse error */ }
-      imageURLs = imageURLs.concat(bodyImages);
+if (req.body.imageURLs) {
+  if (Array.isArray(req.body.imageURLs)) {
+    imageURLs = imageURLs.concat(req.body.imageURLs);
+  } else {
+    try {
+      // Nếu gửi kiểu string
+      imageURLs = imageURLs.concat(JSON.parse(req.body.imageURLs));
+    } catch (err) {
+      // Nếu parse lỗi thì bỏ qua
     }
+  }
+}
 
-    const result = await productServices.createProductService({
-      ...req.body,
-      img: mainImgUrl,
-      image_urls: imageURLs
-    });
+
+const result = await productServices.createProductService({
+  ...req.body,
+  img: mainImgUrl || req.body.img, // Ưu tiên file, nếu không có thì lấy từ body
+  image_urls: imageURLs
+});
+
+
+  
 
     res.status(200).json({
       success: true,
