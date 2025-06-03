@@ -65,7 +65,7 @@ app.use((req, res) => {
   try {
     await sequelize.authenticate();
     console.log("✔️  MySQL connected.");
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
     console.log("✔️  Models synchronized.");
     
     app.listen(PORT, () =>
