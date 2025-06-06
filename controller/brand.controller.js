@@ -33,7 +33,7 @@
     try {
       // Sequelize: attributes chọn trường
       const result = await Brand.findAll({
-        attributes: ['id', 'name', 'email', 'logo', 'website', 'location']
+        attributes: ['id', 'name', 'email', 'logo', 'website', 'location', 'status']
       });
       res.status(200).json({
         success: true,

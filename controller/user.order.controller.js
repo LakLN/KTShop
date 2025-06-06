@@ -3,32 +3,26 @@
   const dayjs = require("dayjs");
 
   // 1. Lấy tất cả đơn hàng theo user
- module.exports.getOrderByUser = async (req, res, next) => {
+// Lấy tất cả đơn hàng theo user, trả về số lượng từng trạng thái
+module.exports.getOrderByUser = async (req, res, next) => {
   try {
-    const { page = 1, limit = 8, user_id } = req.query; // thêm user_id vào query
+    const { page = 1, limit = 8, user_id } = req.query;
     const offset = (page - 1) * limit;
 
     if (!user_id) {
       return res.status(400).json({ success: false, message: "Missing user_id in query" });
     }
 
-    const whereUser = { user_id }; // lấy user_id từ query
+    const whereUser = { user_id };
 
     // Đếm tổng số đơn hàng
     const totalDoc = await Order.count({ where: whereUser });
 
-    // Đếm số lượng & tổng tiền từng trạng thái
+    // Đếm số lượng đơn theo từng trạng thái
     const statusList = ["pending", "processing", "delivered"];
     let result = {};
     for (let status of statusList) {
-      const { count, total } = await Order.findOne({
-        attributes: [
-          [fn("COUNT", col("id")), "count"],
-          [fn("SUM", col("total_amount")), "total"]
-        ],
-        where: { ...whereUser, status }
-      }) || { count: 0, total: 0 };
-      result[status] = count || 0;
+      result[status] = await Order.count({ where: { ...whereUser, status } });
     }
 
     // Lấy danh sách đơn hàng (phân trang)
@@ -39,7 +33,7 @@
       offset
     });
 
-    res.send({
+    res.status(200).json({
       orders,
       pending: result.pending,
       processing: result.processing,
