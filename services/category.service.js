@@ -73,7 +73,7 @@ exports.getSingleCategoryService = async (id) => {
   const result = await Category.findByPk(id);
   return result;
 };
-x
+
 // Lấy toàn bộ categories trừ những parent không mong muốn (filtered)
 exports.getAllCategoryServicesFiltered = async (excluded) => {
   const categories = await Category.findAll({
