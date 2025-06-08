@@ -153,43 +153,47 @@ module.exports.getOrderByUser = async (req, res, next) => {
     }
   };
 
-  // 5. Thống kê 5 category bán chạy nhất (dựa vào dữ liệu cart JSON)
   exports.mostSellingCategory = async (req, res, next) => {
-    try {
-      // Nếu bạn có bảng trung gian order_product (nên có!), JOIN lấy group luôn
-      // Còn nếu cart lưu JSON, bạn phải scan toàn bộ order và group bằng JS
-      const orders = await Order.findAll();
-      // Gom các productType trong cart (cart: array of products)
-      const categoryMap = {};
-      orders.forEach(order => {
-        let cart = [];
-try {
-  if (typeof order.cart === 'string') {
-    cart = JSON.parse(order.cart);
-  } else {
-    cart = order.cart;
-  }
-} catch {}
-if (!Array.isArray(cart)) cart = [];
-cart.forEach(item => {
-  const type = item.productType;
-  const quantity = Number(item.orderQuantity || 1);
-  if (!categoryMap[type]) categoryMap[type] = 0;
-  categoryMap[type] += quantity;
-});
+  try {
+    const orders = await Order.findAll();
 
+    const categoryMap = {};
+
+    orders.forEach(order => {
+      let cart = [];
+      try {
+        if (typeof order.cart === 'string') {
+          cart = JSON.parse(order.cart);
+        } else {
+          cart = order.cart;
+        }
+      } catch (e) {}
+
+      if (!Array.isArray(cart)) return;
+
+      cart.forEach(item => {
+        // Ưu tiên productType từ item, nếu không có thì lấy từ item.category
+        const type = item.productType || item.category?.product_type || "unknown";
+        const quantity = Number(item.orderQuantity || 1);
+
+        if (!type || type === "undefined" || type === "unknown") return;
+
+        if (!categoryMap[type]) categoryMap[type] = 0;
+        categoryMap[type] += quantity;
       });
-      // Chuyển về mảng, sort giảm dần
-      const categoryData = Object.entries(categoryMap)
-        .map(([type, count]) => ({ type, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
+    });
 
-      res.status(200).json({ categoryData });
-    } catch (error) {
-      next(error);
-    }
-  };
+    const categoryData = Object.entries(categoryMap)
+      .map(([type, count]) => ({ type, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    res.status(200).json({ categoryData });
+  } catch (error) {
+    next(error);
+  }
+};
+
 
   // 6. Đơn hàng dashboard (gần đây)
   exports.getDashboardRecentOrder = async (req, res, next) => {

@@ -20,7 +20,6 @@ const getExcludedCategoryIds = async () => {
 exports.addAllProductService = async (data) => {
   await Product.destroy({ where: {} });
   const products = await Product.bulkCreate(data);
-  // **Lưu ý:** Bạn nên dùng bảng trung gian, tránh thao tác push từng id như Mongoose!
   return products;
 };
 
