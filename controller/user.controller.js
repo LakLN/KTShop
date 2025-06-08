@@ -153,7 +153,7 @@ exports.forgetPassword = async (req, res, next) => {
     if (!user) {
       return res.status(404).send({ message: "User Not found with this email!" });
     } else {
-      const token = jwt.sign({ email: user.email }, secret.jwt_secret, { expiresIn: '10m' });
+      const token = jwt.sign({ email: user.email }, secret.jwt_secret_for_verify, { expiresIn: '10m' });
       await user.update({
         confirmation_token: token,
         confirmation_token_expires: new Date(Date.now() + 10 * 60 * 1000)
