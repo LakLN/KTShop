@@ -256,6 +256,7 @@ exports.updateUser = async (req, res, next) => {
         phone: req.body.phone,
         address: req.body.address,
         bio: req.body.bio,
+        image_url: req.body.image_url 
       });
       const token = generateToken(user);
       res.status(200).json({
