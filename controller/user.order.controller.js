@@ -153,7 +153,7 @@ module.exports.getOrderByUser = async (req, res, next) => {
     }
   };
 
-  exports.mostSellingCategory = async (req, res, next) => {
+ exports.mostSellingCategory = async (req, res, next) => {
   try {
     const orders = await Order.findAll();
 
@@ -172,19 +172,19 @@ module.exports.getOrderByUser = async (req, res, next) => {
       if (!Array.isArray(cart)) return;
 
       cart.forEach(item => {
-        // Ưu tiên productType từ item, nếu không có thì lấy từ item.category
-        const type = item.productType || item.category?.product_type || "unknown";
+        // Lấy category parent
+        const parent = item.parent || item.category_name || item.category?.parent || "unknown";
         const quantity = Number(item.orderQuantity || 1);
 
-        if (!type || type === "undefined" || type === "unknown") return;
+        if (!parent || parent === "undefined" || parent === "unknown") return;
 
-        if (!categoryMap[type]) categoryMap[type] = 0;
-        categoryMap[type] += quantity;
+        if (!categoryMap[parent]) categoryMap[parent] = 0;
+        categoryMap[parent] += quantity;
       });
     });
 
     const categoryData = Object.entries(categoryMap)
-      .map(([type, count]) => ({ type, count }))
+      .map(([parent, count]) => ({ parent, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
