@@ -14,17 +14,32 @@ exports.addReview = async (req, res, next) => {
       return res.status(400).json({ message: "You have already left a review for this product." });
     }
 
-    // Check user đã mua sản phẩm này chưa (cart là JSON, phải truy vấn dạng LIKE nếu dùng MySQL)
-    const checkPurchase = await Order.findOne({
-      where: {
-        user_id,
-        cart: { [Op.like]: `%${product_id}%` }
-      }
-    });
+    // Check user đã mua sản phẩm này chưa (chuẩn theo cart là mảng JSON)
+const orders = await Order.findAll({
+  where: {
+    user_id,
+    status: { [Op.in]: ["delivered", "processing", "pending"] } // hoặc chỉ 'delivered'
+  }
+});
 
-    if (!checkPurchase) {
-      return res.status(400).json({ message: "Without purchase you can not give here review!" });
+let purchased = false;
+for (let order of orders) {
+  let cart = [];
+  try {
+    cart = typeof order.cart === 'string' ? JSON.parse(order.cart) : order.cart;
+  } catch (e) {}
+
+  if (Array.isArray(cart)) {
+    if (cart.some(item => String(item.id) === String(product_id))) {
+      purchased = true;
+      break;
     }
+  }
+}
+
+if (!purchased) {
+  return res.status(400).json({ message: "Without purchase you can not give here review!" });
+}
 
     // Tạo review mới
     const review = await Review.create({
